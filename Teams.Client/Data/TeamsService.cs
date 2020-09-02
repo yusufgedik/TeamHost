@@ -21,8 +21,10 @@ namespace Teams.Client.Data
         private const string SaveTaskServiceName = "Task/SaveTask";
         private const string GetTaskListServiceName = "Task/GetTaskList";
         private const string DeleteTaskServiceName = "Task/DeleteTask";
-        private const string SaveTeamServiceName = "user/SaveTeam";
+        private const string SaveTeamServiceName = "User/SaveTeam";
         private const string SaveDeviceServiceName = "User/SaveDevice";
+        private const string SaveUserTeamServiceName = "User/SaveUserTeam";
+        private const string DeleteTeamServiceName = "User/DeleteTeam";
         private StateManagenment _state;
         public TeamsService(IConfiguration configuration, StateManagenment state)
         {
@@ -97,7 +99,7 @@ namespace Teams.Client.Data
             response = response.OrderBy(p => p.Order).ToArray();
             return response;
         }
-        
+
         public async Task<ResponseBase> SaveTask(TaskModel task)
         {
             string responseString = await CallAsync(SaveTaskServiceName, JsonConvert.SerializeObject(task), MethodTypeEnum.POST, _state.userState.Token);
@@ -126,6 +128,18 @@ namespace Teams.Client.Data
         {
             string responseString = await CallAsync(SaveTeamServiceName, JsonConvert.SerializeObject(request), MethodTypeEnum.POST, _state.userState.Token);
             TeamModelResponse response = JsonConvert.DeserializeObject<TeamModelResponse>(responseString);
+            return response;
+        }
+    public async Task<ResponseBase> DeleteTeam(DeleteTeamRequest request)
+        {
+            string responseString = await CallAsync(DeleteTeamServiceName, JsonConvert.SerializeObject(request), MethodTypeEnum.POST, _state.userState.Token);
+            ResponseBase response = JsonConvert.DeserializeObject<ResponseBase>(responseString);
+            return response;
+        }
+public async Task<ResponseBase> SaveUserTeam(SaveUserTeamRequest request)
+        {
+            string responseString = await CallAsync(SaveUserTeamServiceName, JsonConvert.SerializeObject(request), MethodTypeEnum.POST, _state.userState.Token);
+            ResponseBase response = JsonConvert.DeserializeObject<ResponseBase>(responseString);
             return response;
         }
     }

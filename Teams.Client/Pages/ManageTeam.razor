@@ -22,11 +22,13 @@
             </div>
         </RadzenCard>
     </EditForm>
-    <h2>Manage Team</h2>
+    <h2 style="margin-top:20px">Manage Team</h2>
 
-    <EditForm Model="@team" OnValidSubmit="@SaveTeam">
+    <EditForm Model="@team" OnValidSubmit="@SaveUsersTeam">
         <RadzenCard>
+            <h3>Teams You Manage</h3>
             <div class="assing-board-combo"><RadzenDropDown AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@teams" TextProperty="Name" ValueProperty="ID" Change="ChangeTeams" @bind-Value="teamID"></RadzenDropDown></div>
+            <h3>Users</h3>
             <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
                         AllowSorting="true" Data="@usersTeam" TItem="SearchUserList" ColumnWidth="200px">
                 <Columns>
@@ -34,14 +36,34 @@
                     <RadzenGridColumn TItem="SearchUserList" Property="FullName" Title="FullName" />
                     <RadzenGridColumn TItem="SearchUserList" Property="IsTeamPersonel" Title="Is Personel">
                         <Template Context="data">
-                            <input type="checkbox" @bind="data.IsTeamPersonel" title="Remember Me" />
+                            @if (data.ID == teams.FirstOrDefault(p => p.ID == teamID).AdminUser)
+                            {
+                                <input type="checkbox" disabled="disabled" @bind="data.IsTeamPersonel" title="Remember Me" />
+                            }
+                            else
+                            {
+                                <input type="checkbox" @bind="data.IsTeamPersonel" title="Remember Me" />
+                            }
+
                         </Template>
                     </RadzenGridColumn>
                 </Columns>
             </RadzenGrid>
+            <br />
+            <h3>Team Users</h3>
+            <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
+                        AllowSorting="true" Data="@usersTeam.Where(p=>p.IsTeamPersonel == true)" TItem="UserModel" ColumnWidth="200px">
+                <Columns>
+                    <RadzenGridColumn TItem="UserModel" Property="Email" Title="E-mail" />
+                    <RadzenGridColumn TItem="UserModel" Property="FullName" Title="FullName" />
+                </Columns>
+            </RadzenGrid>
             <hr />
             <div>
-                <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save"
+                <RadzenButton ButtonType="Radzen.ButtonType.Button" Text="Delete Team"
+                              ButtonStyle="Radzen.ButtonStyle.Secondary" class="delete-button btn-block btn-radius ui-button mr-2"
+                              Click="DeleteTeam" />
+                <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save Team"
                               ButtonStyle="Radzen.ButtonStyle.Primary" class="add-button btn-block btn-radius ui-button mr-2" />
             </div>
         </RadzenCard>
@@ -51,14 +73,17 @@
     TeamModel team = new TeamModel();
     List<TeamModel> teams = new List<TeamModel>();
     List<UserModel> users = new List<UserModel>();
-    IEnumerable<SearchUserList> usersTeam = new List<SearchUserList>();
+    List<SearchUserList> usersTeam = new List<SearchUserList>();
     string userKey;
     int teamID;
     public string errorMessage;
     public AlertMessageType messageType = AlertMessageType.Error;
     protected override async Task OnInitializedAsync()
     {
-        teams = state.userState.TeamList.Where(p => p.AdminUser == state.userState.ID).ToList();
+        if (state.userState.TeamList != null)
+        {
+            teams = state.userState.TeamList.Where(p => p.AdminUser == state.userState.ID).ToList();
+        }
         TeamModel defaultTeam = new TeamModel
         {
             ID = 0,
@@ -67,6 +92,27 @@
         teams.Insert(0, defaultTeam);
         UserModel[] response = await service.GetAllUser();
         users = response.ToList();
+    }
+    public async Task SaveUsersTeam()
+    {
+        if (teamID != 0)
+        {
+            SaveUserTeamRequest request = new SaveUserTeamRequest();
+            request.TeamID = teamID;
+            request.UserIDList = usersTeam.Where(p => p.IsTeamPersonel == true && p.ID != state.userState.ID).Select(x => x.ID).ToArray();
+            ResponseBase response = await service.SaveUserTeam(request);
+            if (response.Result == "Success")
+            {
+                messageType = AlertMessageType.Success;
+                errorMessage = "Success";
+            }
+        }
+        else
+        {
+            messageType = AlertMessageType.Error;
+            errorMessage = "Please Select Team";
+        }
+
     }
     public async Task SaveTeam()
     {
@@ -78,13 +124,23 @@
         {
             messageType = AlertMessageType.Success;
             errorMessage = "Success";
-            List<TeamModel> temp = state.userState.TeamList.ToList();
-            temp.Add(new TeamModel
+            List<TeamModel> temp = new List<TeamModel>();
+            if (state.userState.TeamList != null)
+            {
+                temp = state.userState.TeamList.ToList();
+            }
+            TeamModel tempModel = new TeamModel
             {
                 ID = response.ID,
                 AdminUser = state.userState.ID,
                 Name = response.Name
-            });
+            };
+            temp.Add(tempModel);
+            teams.Add(tempModel);
+            state.userState.TeamList = temp.ToArray();
+            UserModel[] responseUser = await service.GetAllUser();
+            users = responseUser.ToList();
+            StateHasChanged();
         }
         else
         {
@@ -92,9 +148,44 @@
             errorMessage = response.Result;
         }
     }
+    public async Task DeleteTeam()
+    {
+        if (teamID != 0)
+        {
+            DeleteTeamRequest request = new DeleteTeamRequest();
+            request.TeamID = teamID;
+            ResponseBase response = await service.DeleteTeam(request);
+            if (response.Result == "Success")
+            {
+                messageType = AlertMessageType.Success;
+                errorMessage = "Success";
+                List<TeamModel> temp = state.userState.TeamList.ToList();
+                TeamModel teamItem = temp.FirstOrDefault(p => p.ID == teamID);
+                temp.Remove(teamItem);
+                teams.Remove(teamItem);
+                state.userState.TeamList = temp.ToArray();
+                UserModel[] responseUser = await service.GetAllUser();
+                users = responseUser.ToList();
+                teamID = 0;
+                ChangeTeams();
+                StateHasChanged();
+            }
+            else
+            {
+                messageType = AlertMessageType.Error;
+                errorMessage = response.Result;
+            }
+        }
+        else
+        {
+            messageType = AlertMessageType.Error;
+            errorMessage = "Please Select Team";
+        }
+    }
     public async Task ChangeTeams()
     {
         List<SearchUserList> tempUserList = new List<SearchUserList>();
+        errorMessage = null;
         foreach (var user in users)
         {
             SearchUserList tempUser = new SearchUserList();

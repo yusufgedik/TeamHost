@@ -79,7 +79,7 @@
         }
         users = await service.GetAllUser();
         taskRequest = new TaskRequest();
-        if (state.team.ID == 0)
+        if (state.team == null || state.team.ID == 0)
         {
             users = users.Where(p => p.ID == state.userState.ID).ToArray();
             taskRequest.UserID = new int[] { state.userState.ID };

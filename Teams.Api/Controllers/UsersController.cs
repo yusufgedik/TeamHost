@@ -203,5 +203,55 @@ namespace Teams.Api.Controllers
                 }
             }
         }
+        [HttpPost]
+        public IActionResult DeleteTeam(DeleteTeamRequest team)
+        {
+            try
+            {
+                using (TeamsDbEntities entities = new TeamsDbEntities())
+                {
+                    Team teamList = entities.Teams.FirstOrDefault(p => p.ID == team.TeamID);
+                    entities.Teams.Remove(teamList);
+                    List<TeamUserStatu> teamStatusList = entities.TeamUserStatus.Where(p => p.TeamID == team.TeamID).ToList();
+                    if (teamStatusList != null && teamStatusList.Count != 0)
+                    {
+                        entities.TeamUserStatus.RemoveRange(teamStatusList);
+                    }
+                    entities.SaveChanges();
+                    return Ok(new { Result = "Success" });
+                }
+            }
+            catch (Exception)
+            {
+                return BadRequest(new { Result = "System Exeption" });
+            }
+           
+        }
+        [HttpPost]
+        public IActionResult SaveUserTeam(SaveUserTeamRequest team)
+        {
+            try
+            {
+                using (TeamsDbEntities entities = new TeamsDbEntities())
+                {
+                    Team teamEntity = entities.Teams.FirstOrDefault(p=>p.ID == team.TeamID);
+                    List<TeamUserStatu> teamStatus = entities.TeamUserStatus.Where(p => p.TeamID == team.TeamID).ToList();
+                    int[] addList = team.UserIDList.Where(p => !teamStatus.Any(y=> y.UserID.Value == p )).ToArray();
+                    List<TeamUserStatu> excludeItem = teamStatus.Where(p=> (!team.UserIDList.Contains(p.UserID.Value)&& teamEntity.AdminUser != p.UserID)).ToList();
+                    entities.TeamUserStatus.RemoveRange(excludeItem);
+                    foreach (var userID in addList)
+                    {
+                        entities.TeamUserStatus.Add(new TeamUserStatu { TeamID = team.TeamID, UserID = userID });
+                    }
+                    entities.SaveChanges();
+                }
+                return Ok(new ResponseBase { Result = "Success" });
+            }
+            catch (Exception)
+            {
+                return BadRequest(new ResponseBase { Result = "System Error." });
+            }
+            
+        }
     }
 }

@@ -65,7 +65,17 @@ a, .btn-link {
     font-size: 34px;
     font-weight: bold;
 }
-.assing-board label {
+.add-button-task {
+    text-align: center;
+    width: 100%;
+    cursor: pointer;
+    font-size: 34px;
+    font-weight: bold;
+}
+.delete-button {
+    background-color: red !important;
+}
+    .assing-board label {
     padding: 5px;
     font-weight: bold;
 }
@@ -340,6 +350,10 @@ app {
     .add-button {
         width: 200px;
         float: right;
+    }
+    .delete-button {
+        width: 200px;
+        float: left;
     }
     app {
         flex-direction: row;

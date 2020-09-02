@@ -25,4 +25,13 @@ namespace Teams.Models.Models
         public string Name { get; set; }
         public int UserID { get; set; }
     }
+    public class SaveUserTeamRequest
+    {
+        public int[] UserIDList { get; set; }
+        public int TeamID { get; set; }
+    }
+    public class DeleteTeamRequest
+    {
+        public int TeamID { get; set; }
+    }
 }
