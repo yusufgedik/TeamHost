@@ -113,11 +113,16 @@ namespace Teams.Api.Controllers
             {
                 using (TeamsDbEntities entities = new TeamsDbEntities())
                 {
-                    List<UserDevice> devices = entities.UserDevices.Where(p => p.UserID == request.UserID && p.NotificationKey == request.NotificationKey).ToList();
-                    if (devices.Count == 0)
+                    UserDevice devices = entities.UserDevices.FirstOrDefault(p =>p.NotificationKey == request.NotificationKey);
+                    if (devices == default)
                     {
                         entities.UserDevices.Add(new UserDevice { NotificationKey = request.NotificationKey, UserID = request.UserID, CreateDate = DateTime.Now });
                         entities.SaveChanges();
+                    }
+                    else
+                    {
+                        devices.UserID = request.UserID;
+                        devices.CreateDate = DateTime.Now;
                     }
                 }
                 return Ok(new ResponseBase { Result = "Success" });
