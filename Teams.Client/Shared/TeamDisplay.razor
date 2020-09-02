@@ -1,0 +1,47 @@
+﻿@inject StateManagenment state
+@inject NavigationManager NavigationManager
+@if (state.userState != null)
+{
+    <div class="assing-board-combo"><RadzenDropDown AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@teams" TextProperty="Name" ValueProperty="ID" Change="ChangeTeams" @bind-Value="teamID"></RadzenDropDown></div>
+
+}
+@code{
+    TeamModel[] teams;
+    int teamID;
+    protected override async Task OnInitializedAsync()
+    {
+        List<TeamModel> temp = new List<TeamModel>();
+        temp = state.userState.TeamList.ToList();
+        if (state.team != null)
+        {
+            teamID = state.team.ID;
+        }
+        TeamModel defaultTeam = new TeamModel
+        {
+            ID = 0,
+            Name = "No Teams"
+        };
+        temp.Insert(0, defaultTeam);
+        teams = temp.ToArray();
+        state.team = defaultTeam;
+    }
+    public async Task ChangeTeams()
+    {
+        List<TeamModel> temp = teams.ToList();
+        teams = temp.ToArray();
+        if (teamID == 0)
+        {
+            state.team = new TeamModel
+            {
+                ID = 0,
+                Name = "No Teams"
+            };
+        }
+        else
+        {
+            state.team = state.userState.TeamList.FirstOrDefault(p => p.ID == teamID);
+        }
+        StateHasChanged();
+        NavigationManager.NavigateTo("/manage-team");
+    }
+}

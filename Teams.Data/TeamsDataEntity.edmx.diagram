@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="e9f7aa5c1d9b4d50abadf414c38b21d0" Name="Diagram1">
+        <EntityTypeShape EntityType="TeamsDbModel.Menu" Width="1.5" PointX="2.75" PointY="5.75" />
+        <EntityTypeShape EntityType="TeamsDbModel.Progress" Width="1.5" PointX="0.75" PointY="6" />
+        <EntityTypeShape EntityType="TeamsDbModel.sysdiagram" Width="1.5" PointX="4.75" PointY="5.75" />
+        <EntityTypeShape EntityType="TeamsDbModel.Task" Width="1.5" PointX="2.875" PointY="1.625" />
+        <EntityTypeShape EntityType="TeamsDbModel.TaskLog" Width="1.5" PointX="5.25" PointY="1.375" />
+        <EntityTypeShape EntityType="TeamsDbModel.User" Width="1.5" PointX="0.75" PointY="1.375" />
+        <AssociationConnector Association="TeamsDbModel.FK_Task_Progress" />
+        <AssociationConnector Association="TeamsDbModel.FK_TaskLog_Progress" />
+        <AssociationConnector Association="TeamsDbModel.FK_Task_User1" />
+        <AssociationConnector Association="TeamsDbModel.FK_Task_User2" />
+        <AssociationConnector Association="TeamsDbModel.FK_TaskLog_Task" />
+        <AssociationConnector Association="TeamsDbModel.FK_TaskLog_User" />
+        <AssociationConnector Association="TeamsDbModel.FK_TaskLog_User1" />
+        <EntityTypeShape EntityType="TeamsDbModel.Team" Width="1.5" PointX="6.5" PointY="11.75" />
+        <EntityTypeShape EntityType="TeamsDbModel.TeamUserStatu" Width="1.5" PointX="8.75" PointY="0.875" />
+        <AssociationConnector Association="TeamsDbModel.FK_TeamUserStatus_Teams" />
+        <AssociationConnector Association="TeamsDbModel.FK_TeamUserStatus_User" />
+        <EntityTypeShape EntityType="TeamsDbModel.UserDevice" Width="1.5" PointX="3" PointY="9.125" />
+        <AssociationConnector Association="TeamsDbModel.FK_UserDevice_User" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

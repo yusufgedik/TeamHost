@@ -1,0 +1,12 @@
+﻿@inject StateManagenment state
+<AuthorizeView>
+    <Authorized>
+        <TeamDisplay />
+        <a href="">Wellcome, @state.userState.FirstName @state.userState.LastName</a>
+        <a href="/authentication/logout">Logout</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="/authentication/register">Register</a>
+        <a href="/authentication/login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>

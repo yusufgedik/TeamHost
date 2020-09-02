@@ -1,0 +1,74 @@
+﻿@page "/"
+@namespace Teams.Client.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teams.Client</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default.css" />
+    <link rel="manifest" href="/manifest.json">
+    <script>
+        function allowNotification() {
+            Notification.requestPermission();
+        }
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-messaging.js"></script>
+    <script>
+        async function initializeFireBase() {
+            var firebaseConfig = {
+                apiKey: "AIzaSyCx2NYoPrnV9o4tgzddCYEO5NSMvk-pou0",
+                authDomain: "teams-21e34.firebaseapp.com",
+                databaseURL: "https://teams-21e34.firebaseio.com",
+                projectId: "teams-21e34",
+                storageBucket: "teams-21e34.appspot.com",
+                messagingSenderId: "386307265774",
+                appId: "1:386307265774:web:ac7a034a9c8fd4d36bcfff",
+                measurementId: "G-FYB4MR145S"
+            };
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            const messaging = firebase.messaging();
+            messaging.vapidKey = 'BMqAOpAJob5D1yiEubO0qU__YWXWvmd65K1-cGmlRECMAbg3hhHD1e425SjqfYB6MC4K9WREM36GV6nGpwUXdkI';
+            return await messaging.getToken();
+        }
+        
+    </script>
+</head>
+<body>
+    <app>
+        <environment include="Staging,Production">
+            <component render-mode="ServerPrerendered" type="typeof(Teams.Client.App)" />
+        </environment>
+        <environment include="Development">
+            <component render-mode="Server" type="typeof(Teams.Client.App)" />
+        </environment>
+    </app>
+
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            An error has occurred. This application may no longer respond until reloaded.
+        </environment>
+        <environment include="Development">
+            An unhandled exception has occurred. See browser dev tools for details.
+        </environment>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>

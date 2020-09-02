@@ -1,0 +1,125 @@
+﻿@page "/add-task"
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalStorageService storageService
+@inject StateManagenment state
+<div class="main-box">
+    <h1>Add Task</h1>
+    @if (users != null)
+    {
+        <EditForm Model="@task" OnValidSubmit="@SaveTask">
+            <RadzenCard>
+                <AlertMessage Message="@errorMessage" MessageType="@messageType" />
+                <DataAnnotationsValidator />
+                <label class="login-email">Assing To</label>
+                <RadzenDropDown AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@users" TextProperty="FullName" ValueProperty="ID" @bind-Value="task.UserID"></RadzenDropDown>
+                <ValidationMessage For="@(()=> task.UserID)"></ValidationMessage>
+                <br />
+                <label class="login-email">Header</label>
+                <RadzenTextBox @bind-Value="task.Header"></RadzenTextBox>
+                <ValidationMessage For="@(()=> task.Header)"></ValidationMessage>
+                <br />
+                <label class="login-email">Detail</label>
+                <RadzenTextArea @bind-Value="task.Detail"></RadzenTextArea>
+                <ValidationMessage For="@(()=> task.Detail)"></ValidationMessage>
+                <br />
+                <label class="login-email">Progress</label>
+                <RadzenDropDown Data="@ProgressType" @bind-Value="task.Progress"></RadzenDropDown>
+                <ValidationMessage For="@(()=> task.Progress)"></ValidationMessage>
+                <br />
+                <label class="login-email">Start Date</label>
+                <RadzenDatePicker DateFormat="MM/dd/yyyy" @bind-Value="task.StartDate"></RadzenDatePicker>
+                <ValidationMessage For="@(()=> task.StartDate)"></ValidationMessage>
+                <br />
+                <label class="login-email">End Date</label>
+                <RadzenDatePicker DateFormat="MM/dd/yyyy" @bind-Value="task.EndDate"></RadzenDatePicker>
+                <ValidationMessage For="@(()=> task.EndDate)"></ValidationMessage>
+                <br />
+                <hr />
+                <div>
+                    <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save"
+                                  ButtonStyle="Radzen.ButtonStyle.Primary" class="add-button btn-block btn-radius ui-button mr-2"
+                                  Disabled="isBusy" />
+                </div>
+            </RadzenCard>
+        </EditForm>
+        if (task.TaskLogs != null && task.TaskLogs.Count > 0)
+        {
+<div class="history-body">
+    <h2 class="history-header">History</h2>
+    <RadzenDataList WrapItems="true" AllowPaging="true" Data="@task.TaskLogs.OrderBy(p=>p.ModifyDate).ToList()" TItem="TaskLogModel">
+        <Template Context="tasklog">
+            <div class="arrow-content">
+                <div style="text-align:center">@tasklog.ModifyByModel.FullName</div>
+                <div class="arrow-body"></div>
+                <div style="text-align:center">@tasklog.ModifyDate</div>
+            </div>
+            <RadzenCard Style="width: auto; cursor: pointer;flex:none !important;">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div>Progress:<b> @tasklog.Progress</b></div>
+                        <div>Assing To: @tasklog.UserModel.FullName</div>
+                    </div>
+                </div>
+            </RadzenCard>
+        </Template>
+    </RadzenDataList>
+</div>
+        }
+    }
+</div>
+
+@code {
+    public string errorMessage;
+    public const string StartDateConst = "Start Date";
+    public const string EndDateConst = "End Date";
+    bool isBusy = false;
+    UserModel[] users;
+    public AlertMessageType messageType = AlertMessageType.Error;
+    IEnumerable<ProgressTypeEnum> ProgressType = Enum.GetValues(typeof(ProgressTypeEnum)).Cast<ProgressTypeEnum>();
+    public TaskModel task = new TaskModel();
+    protected override async Task OnInitializedAsync()
+    {
+        var query = new Uri(NavigationManager.Uri).Query;
+        task.Progress = ProgressTypeEnum.Active;
+        task.UserID = state.userState.ID;
+        if (QueryHelpers.ParseQuery(query).TryGetValue("progress", out var value))
+        {
+            task.Progress = (ProgressTypeEnum)Enum.Parse(typeof(ProgressTypeEnum), value);
+        }
+        else if (QueryHelpers.ParseQuery(query).TryGetValue("taskID", out var taskValue))
+        {
+            task = state.taskState != null && state.taskState.ID == Convert.ToInt16(taskValue) ? state.taskState : new TaskModel();
+        }
+        users = await service.GetAllUser();
+        if (state.team.ID == 0)
+        {
+            users = users.Where(p => p.ID == state.userState.ID).ToArray();
+        }
+        else
+        {
+            users = users.Where(p => p.TeamList != null && p.TeamList.Any(x => x.ID == state.team.ID)).ToArray();
+        }
+    }
+    private async Task SaveTask()
+    {
+        task.CreateBy = state.userState.ID;
+        if (task.UserID > 0)
+        {
+            task.TeamID = state.team.ID;
+            ResponseBase user = await service.SaveTask(task);
+            if (user.Result == "Success")
+            {
+                NavigationManager.NavigateTo("/board");
+            }
+        }
+        else
+        {
+            errorMessage = "Please User Assing To Task";
+        }
+
+    }
+}

@@ -1,0 +1,179 @@
+﻿@page "/board"
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalStorageService storageService
+@inject StateManagenment state
+@inject DialogService dialogService
+    <div class="main-box main-box-lg">
+        @if (taskList != null)
+        {
+            <div class="assing-board-content">
+                <h1>Board</h1>
+                <div class="assing-main">
+                    <div class="assing-board" style="width:80px">
+                        <label>Assing To</label>
+                    </div>
+                    <div class="assing-board-combo"><RadzenDropDown AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@users" TextProperty="FullName" ValueProperty="ID" Change="ChangeAssing" @bind-Value="userId"></RadzenDropDown></div>
+                </div>
+            </div>
+            <br />
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Active</th>
+                        <th>Completed</th>
+                        <th>Cancelled</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="board-column">
+                            <RadzenCard Style="margin:0 0.6875rem;padding: 0 1.5625rem;">
+                                <div class="row">
+                                    <div class="add-button" @onclick="(() => NewTask(ProgressTypeEnum.Active))">
+                                        +
+                                    </div>
+                                </div>
+                            </RadzenCard>
+                            <RadzenDataList WrapItems="true" AllowPaging="true" Data="@taskList.Where(p=>p.Progress == ProgressTypeEnum.Active).ToList()" TItem="TaskModel" RowSelect="SelectTask">
+                                <Template Context="task">
+                                    <RadzenCard Style="width:100%;cursor:pointer">
+                                        <div class="row">
+                                            <div @onclick="()=> { ShowDeleteDialog(task); }" class="delete-task">x</div>
+                                            <div class="col-md-12" @onclick="()=> { SelectTask(task); }">
+                                                <b>@task.Header</b>
+                                                <div>@task.Detail</div>
+                                                <hr />
+                                                <div class="footer-board">
+                                                    <b>@users.FirstOrDefault(p => p.ID == task.UserID).FullName</b>
+                                                    <span><RadzenIcon Icon="date_range" /> @task.StartDate.ToString("dd.MM.yyyy") - @task.EndDate.ToString("dd.MM.yyyy")</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </RadzenCard>
+                                </Template>
+                            </RadzenDataList>
+                        </td>
+                        <td class="board-column">
+                            <RadzenCard Style="margin:0 0.6875rem;padding: 0 1.5625rem;">
+                                <div class="row">
+                                    <div class="add-button" @onclick="(() => NewTask(ProgressTypeEnum.Complete))">
+                                        +
+                                    </div>
+                                </div>
+
+                            </RadzenCard>
+                            <RadzenDataList WrapItems="true" AllowPaging="true" Data="@taskList.Where(p=>p.Progress == ProgressTypeEnum.Complete).ToList()" TItem="TaskModel">
+                                <Template Context="task">
+                                    <RadzenCard Style="width:100%;cursor:pointer">
+                                        <div class="row">
+                                            <div @onclick="()=> { ShowDeleteDialog(task); }" class="delete-task">x</div>
+                                            <div class="col-md-12" @onclick="()=> { SelectTask(task); }">
+                                                <b>@task.Header</b>
+                                                <div>@task.Detail</div>
+                                                <hr />
+                                                <div class="footer-board">
+                                                    <b>@users.FirstOrDefault(p => p.ID == task.UserID).FullName</b>
+                                                    <span><RadzenIcon Icon="date_range" />@task.StartDate.ToString("dd.MM.yyyy") - @task.EndDate.ToString("dd.MM.yyyy")</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </RadzenCard>
+                                </Template>
+                            </RadzenDataList>
+                        </td>
+                        <td class="board-column">
+                            <RadzenCard Style="margin:0 0.6875rem;padding: 0 1.5625rem;">
+                                <div class="row">
+                                    <div class="add-button" @onclick="(() => NewTask(ProgressTypeEnum.Cancelled))">
+                                        +
+                                    </div>
+                                </div>
+                            </RadzenCard>
+                            <RadzenDataList WrapItems="true" AllowPaging="true" Data="@taskList.Where(p=>p.Progress == ProgressTypeEnum.Cancelled).ToList()" TItem="TaskModel">
+                                <Template Context="task">
+                                    <RadzenCard Style="width:300px;cursor:pointer">
+                                        <div @onclick="()=> { ShowDeleteDialog(task); }" class="delete-task">x</div>
+                                        <div class="row">
+                                            <div class="col-md-12" @onclick="()=> { SelectTask(task); }">
+                                                <b>@task.Header</b>
+                                                <div>@task.Detail</div>
+                                                <hr />
+                                                <div class="footer-board">
+                                                    <b>@users.FirstOrDefault(p => p.ID == task.UserID).FullName</b>
+                                                    <span><RadzenIcon Icon="date_range" />@task.StartDate.ToString("dd.MM.yyyy") - @task.EndDate.ToString("dd.MM.yyyy")</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </RadzenCard>
+                                </Template>
+                            </RadzenDataList>
+                        </td>
+                    </tr>
+                </tbody>
+
+                <tbody>
+                </tbody>
+            </table>
+        }
+    </div>
+    @code {
+        TaskRequest taskRequest;
+        TaskModel[] taskList;
+        UserModel[] users;
+        int userId;
+        public string errorMessage;
+        public AlertMessageType messageType = AlertMessageType.Success;
+        protected override async Task OnInitializedAsync()
+        {
+            users = await service.GetAllUser();
+            if (state.team.ID == 0)
+            {
+                users = users.Where(p => p.ID == state.userState.ID).ToArray();
+            }
+            else
+            {
+                users = users.Where(p => p.TeamList != null && p.TeamList.Any(x => x.ID == state.team.ID)).ToArray();
+            }
+            taskRequest = new TaskRequest();
+            taskRequest.UserID = new int[] { state.userState.ID };
+            taskRequest.TeamID = state.team.ID;
+            userId = state.userState.ID;
+            taskList = await service.GetTaskList(taskRequest);
+        }
+        public void SelectTask(TaskModel selectedTask)
+        {
+            state.taskState = selectedTask;
+            NavigationManager.NavigateTo($"/add-task?taskID={selectedTask.ID}");
+        }
+        public async Task DeleteTask(TaskModel removeTask)
+        {
+            ResponseBase response = await service.DeleteTask(removeTask);
+            errorMessage = response.Result;
+            taskList = taskList.Where(p => p.ID != removeTask.ID).ToArray();
+            StateHasChanged();
+        }
+        public async Task ChangeAssing()
+        {
+            taskRequest.UserID = new int[] { userId };
+            taskRequest.TeamID = state.team.ID;
+            taskList = await service.GetTaskList(taskRequest);
+        }
+        public void NewTask(ProgressTypeEnum progressTypeEnum)
+        {
+            NavigationManager.NavigateTo($"/add-task?progress={progressTypeEnum}");
+        }
+        async Task ShowDeleteDialog(TaskModel taskRequest) => await dialogService.OpenAsync("Delete Task", ds =>
+        @<RadzenCard Style="padding: 20px;">
+             <p Style="margin-bottom: 40px;">This task will be deleted. Are you sure you want to do this?</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <RadzenButton Text="Ok" Click="()=> { DeleteTask(taskRequest);ds.Close(false); }" Style="margin-bottom: 10px; width: 150px" />
+                    <RadzenButton Text="Cancel" Click="()=> ds.Close(false)" ButtonStyle="ButtonStyle.Secondary" Style="margin-bottom: 10px; width: 150px; float:right" />
+                </div>
+            </div>
+        </RadzenCard>);
+    }

@@ -1,0 +1,139 @@
+﻿@page "/"
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalStorageService storageService
+@inject StateManagenment state
+@inject DialogService dialogService
+@inject IJSRuntime jsRuntime
+<div class="main-box main-box-lg">
+    <h1>Task Statistics</h1>
+    @if (taskList != null)
+    {
+        if (taskList.Length > 0)
+        {
+            <div class="row">
+                <div class="col-md-4 col-sm-12 p-4">
+
+                    <RadzenChart>
+                        <RadzenDonutSeries Data="@chartItem" CategoryProperty="Name" ValueProperty="Value">
+                            <TitleTemplate>
+                                <div class="rz-donut-content">
+                                    <div>All</div>
+                                    <div>Task</div>
+                                </div>
+                            </TitleTemplate>
+                        </RadzenDonutSeries>
+                    </RadzenChart>
+
+                </div>
+                <div class="col-md-8 col-sm-12 p-4">
+                    <RadzenChart>
+                        <RadzenColumnSeries Data="@chartItem" CategoryProperty="Name" Title="Task" LineType="LineType.Dashed" ValueProperty="Value" />
+                        <RadzenValueAxis Min="0" Formatter="@FormatChart" Step="1">
+                            <RadzenGridLines Visible="true" />
+                            <RadzenAxisTitle Text="Task Count" />
+                        </RadzenValueAxis>
+                        <RadzenBarOptions Radius="5" />
+                    </RadzenChart>
+                </div>
+
+            </div>
+        }
+        <div class="row">
+            <div class="col-md-12">
+                <RadzenScheduler @ref="scheduler" style="height: 768px;" TItem="Appointment" Data="@appointments" StartProperty="Start" EndProperty="End"
+                                 TextProperty="Text" SelectedIndex="2" AppointmentRender="@OnAppointmentRender">
+                    <RadzenDayView />
+                    <RadzenWeekView />
+                    <RadzenMonthView />
+                </RadzenScheduler>
+            </div>
+        </div>
+    }
+</div>
+@code {
+    TaskRequest taskRequest;
+    TaskModel[] taskList;
+    UserModel[] users;
+    ChartItem[] chartItem;
+    RadzenScheduler<Appointment> scheduler;
+    IList<Appointment> appointments = new List<Appointment>();
+    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    protected override async Task OnInitializedAsync()
+    {
+        await jsRuntime.InvokeVoidAsync("allowNotification");
+        if (state.workerServiceKey == null || state.workerServiceKey == String.Empty)
+        {
+            string workerServiceKey = await jsRuntime.InvokeAsync<string>("initializeFireBase");
+            if (workerServiceKey != null && workerServiceKey != String.Empty && state.userState != null)
+            {
+                DeviceRequest device = new DeviceRequest();
+                device.UserID = state.userState.ID;
+                device.NotificationKey = workerServiceKey;
+                await service.SaveDevice(device);
+                state.workerServiceKey = workerServiceKey;
+            }
+        }
+        users = await service.GetAllUser();
+        taskRequest = new TaskRequest();
+        if (state.team.ID == 0)
+        {
+            users = users.Where(p => p.ID == state.userState.ID).ToArray();
+            taskRequest.UserID = new int[] { state.userState.ID };
+        }
+        else
+        {
+            users = users.Where(p => p.TeamList != null && p.TeamList.Any(x => x.ID == state.team.ID)).ToArray();
+            taskRequest.UserID = users.Select(p=>p.ID).ToArray();
+            taskRequest.TeamID = state.team.ID;
+        }
+        taskList = await service.GetTaskList(taskRequest);
+        chartItem = new ChartItem[] { new ChartItem {
+        Name = ProgressTypeEnum.Active.ToString(),
+        Value = taskList.Where(p=>p.Progress ==ProgressTypeEnum.Active).ToArray().Length
+        },
+        new ChartItem {
+        Name = ProgressTypeEnum.Complete.ToString(),
+        Value = taskList.Where(p=>p.Progress ==ProgressTypeEnum.Complete).ToArray().Length
+        },
+        new ChartItem {
+        Name = ProgressTypeEnum.Cancelled.ToString(),
+        Value = taskList.Where(p=>p.Progress ==ProgressTypeEnum.Cancelled).ToArray().Length
+        }
+        };
+        foreach (var taskItem in taskList)
+        {
+            appointments.Add(new Appointment
+            {
+                Start = taskItem.StartDate,
+                End = taskItem.EndDate,
+                Text = taskItem.Header,
+                Progress = taskItem.Progress
+            });
+        }
+    }
+    void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<Appointment> args)
+    {
+        // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
+
+        if (args.Data.Progress == ProgressTypeEnum.Active)
+        {
+            args.Attributes["style"] = "background: #0479cc";
+        }
+        if (args.Data.Progress == ProgressTypeEnum.Complete)
+        {
+            args.Attributes["style"] = "background: #68d5c8";
+        }
+        if (args.Data.Progress == ProgressTypeEnum.Cancelled)
+        {
+            args.Attributes["style"] = "background: #ff6d41";
+        }
+    }
+    string FormatChart(object value)
+    {
+        return Math.Round((double)value, 2).ToString();
+    }
+}

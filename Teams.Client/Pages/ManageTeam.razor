@@ -1,0 +1,111 @@
+﻿@page "/manage-team"
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalStorageService storageService
+@inject StateManagenment state
+<div class="main-box">
+    <EditForm Model="@team" OnValidSubmit="@SaveTeam">
+        <h2>Create Team</h2>
+        <RadzenCard>
+            <AlertMessage Message="@errorMessage" MessageType="@messageType" />
+            <DataAnnotationsValidator />
+            <label class="login-email">Team Name</label>
+            <RadzenTextBox @bind-Value="team.Name"></RadzenTextBox>
+            <ValidationMessage For="@(()=> team.Name)"></ValidationMessage>
+            <hr />
+            <div>
+                <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save"
+                              ButtonStyle="Radzen.ButtonStyle.Primary" class="add-button btn-block btn-radius ui-button mr-2" />
+            </div>
+        </RadzenCard>
+    </EditForm>
+    <h2>Manage Team</h2>
+
+    <EditForm Model="@team" OnValidSubmit="@SaveTeam">
+        <RadzenCard>
+            <div class="assing-board-combo"><RadzenDropDown AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Data="@teams" TextProperty="Name" ValueProperty="ID" Change="ChangeTeams" @bind-Value="teamID"></RadzenDropDown></div>
+            <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
+                        AllowSorting="true" Data="@usersTeam" TItem="SearchUserList" ColumnWidth="200px">
+                <Columns>
+                    <RadzenGridColumn TItem="SearchUserList" Property="Email" Title="E-mail" />
+                    <RadzenGridColumn TItem="SearchUserList" Property="FullName" Title="FullName" />
+                    <RadzenGridColumn TItem="SearchUserList" Property="IsTeamPersonel" Title="Is Personel">
+                        <Template Context="data">
+                            <input type="checkbox" @bind="data.IsTeamPersonel" title="Remember Me" />
+                        </Template>
+                    </RadzenGridColumn>
+                </Columns>
+            </RadzenGrid>
+            <hr />
+            <div>
+                <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save"
+                              ButtonStyle="Radzen.ButtonStyle.Primary" class="add-button btn-block btn-radius ui-button mr-2" />
+            </div>
+        </RadzenCard>
+    </EditForm>
+</div>
+@code{
+    TeamModel team = new TeamModel();
+    List<TeamModel> teams = new List<TeamModel>();
+    List<UserModel> users = new List<UserModel>();
+    IEnumerable<SearchUserList> usersTeam = new List<SearchUserList>();
+    string userKey;
+    int teamID;
+    public string errorMessage;
+    public AlertMessageType messageType = AlertMessageType.Error;
+    protected override async Task OnInitializedAsync()
+    {
+        teams = state.userState.TeamList.Where(p => p.AdminUser == state.userState.ID).ToList();
+        TeamModel defaultTeam = new TeamModel
+        {
+            ID = 0,
+            Name = "Please Select Team"
+        };
+        teams.Insert(0, defaultTeam);
+        UserModel[] response = await service.GetAllUser();
+        users = response.ToList();
+    }
+    public async Task SaveTeam()
+    {
+        TeamRequest request = new TeamRequest();
+        request.Name = team.Name;
+        request.UserID = state.userState.ID;
+        TeamModelResponse response = await service.SaveTeam(request);
+        if (response.Result == null)
+        {
+            messageType = AlertMessageType.Success;
+            errorMessage = "Success";
+            List<TeamModel> temp = state.userState.TeamList.ToList();
+            temp.Add(new TeamModel
+            {
+                ID = response.ID,
+                AdminUser = state.userState.ID,
+                Name = response.Name
+            });
+        }
+        else
+        {
+            messageType = AlertMessageType.Error;
+            errorMessage = response.Result;
+        }
+    }
+    public async Task ChangeTeams()
+    {
+        List<SearchUserList> tempUserList = new List<SearchUserList>();
+        foreach (var user in users)
+        {
+            SearchUserList tempUser = new SearchUserList();
+            tempUser.Email = user.Email;
+            tempUser.FirstName = user.FirstName;
+            tempUser.LastName = user.LastName;
+            tempUser.TeamList = user.TeamList;
+            tempUser.IsTeamPersonel = user.TeamList != null && user.TeamList.Any(x => x.ID == teamID);
+            tempUser.ID = user.ID;
+            tempUserList.Add(tempUser);
+        }
+        usersTeam = tempUserList;
+    }
+}

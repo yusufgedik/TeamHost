@@ -1,0 +1,110 @@
+﻿@page "/authentication/login"
+@attribute [AllowAnonymous]
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILocalStorageService storageService
+@inject StateManagenment state
+
+<div class="middle-box">
+    <h1 class="login-header">Welcome to Teams</h1>
+    <div class="main-login">
+        <div class="row">
+            <div class="col-12">
+                <h2>Login to your account</h2>
+                <EditForm Model="@userModel" OnValidSubmit="@LoginCall">
+                    <RadzenCard>
+                        <AlertMessage Message="@errorMessage" MessageType="@messageType" />
+                        <DataAnnotationsValidator />
+                        <label class="login-email">Email</label>
+                        <RadzenTextBox @bind-Value="userModel.Email"></RadzenTextBox>
+                        <ValidationMessage For="@(()=> userModel.Email)"></ValidationMessage>
+                        <label class="login-email">Password</label>
+                        <RadzenPassword @bind-Value="userModel.Password"></RadzenPassword>
+                        <ValidationMessage For="@(()=> userModel.Password)"></ValidationMessage>
+                        <hr />
+                        <div class="login-remember" @onclick="ChangeRemember">
+                            <input type="checkbox" @bind="userModel.Remember" title="Remember Me" />
+                            <label class="login-email">Remember Me</label>
+                        </div>
+                        <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Login"
+                                      ButtonStyle="Radzen.ButtonStyle.Primary" class="btn-block btn-radius ui-button mr-2"
+                                      Disabled="isBusy" />
+                        <RadzenButton ButtonType="Radzen.ButtonType.Button" Text="Register"
+                                      ButtonStyle="Radzen.ButtonStyle.Secondary" class="btn-block btn-radius ui-button mr-2"
+                                      Disabled="isBusy" Click="GoToRegister" />
+                    </RadzenCard>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    public AuthenticateModel userModel = new AuthenticateModel();
+    ClaimsPrincipal claimsPrincipal;
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    bool isBusy = false;
+    public string errorMessage;
+    public AlertMessageType messageType = AlertMessageType.Error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userModel = await storageService.GetItemAsync<AuthenticateModel>("UserRemember");
+        if (userModel == null)
+        {
+            userModel = new AuthenticateModel();
+        }
+        userModel.Password = "";
+        var query = new Uri(NavigationManager.Uri).Query;
+        if (QueryHelpers.ParseQuery(query).TryGetValue("userName", out var value))
+        {
+            userModel.Email = value;
+        }
+    }
+
+    private async Task LoginCall()
+    {
+        isBusy = true;
+        AuthenticateResponseModel user = await service.Authenticate(userModel);
+        if (user != null)
+        {
+            if (user.Result != null)
+            {
+                errorMessage = user.Result;
+                isBusy = false;
+                return;
+            }
+            await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsAuthenticated(user);
+        }
+        claimsPrincipal = (await authenticationStateTask).User;
+        if (claimsPrincipal.Identity.IsAuthenticated)
+        {
+            if (userModel.Remember)
+            {
+                userModel.Password = "";
+                await storageService.SetItemAsync("UserRemember", userModel);
+            }
+            else
+            {
+                await storageService.RemoveItemAsync("UserRemember");
+            }
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = "Login Failed";
+        }
+        isBusy = false;
+    }
+    void ChangeRemember()
+    {
+        userModel.Remember = !userModel.Remember;
+    }
+    void GoToRegister()
+    {
+        state.alert = null;
+        NavigationManager.NavigateTo("/authentication/register");
+    }
+}
+

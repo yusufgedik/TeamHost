@@ -1,0 +1,21 @@
+﻿@page "/authentication/logout"
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject StateManagenment state
+@code {
+    ClaimsPrincipal claimsPrincipal;
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsLoggedOut();
+        claimsPrincipal = (await authenticationStateTask).User;
+        if (!claimsPrincipal.Identity.IsAuthenticated)
+        {
+            state.userState = null;
+            state.alert = "";
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}

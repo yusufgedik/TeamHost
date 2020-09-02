@@ -1,0 +1,76 @@
+﻿@page "/authentication/register"
+@attribute [AllowAnonymous]
+@inject Teams.Client.Data.TeamsService service;
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject StateManagenment state
+<div class="main">
+    <div class="content px-4 text-center">
+        <div class="middle-box">
+            <h1 class="login-header">Welcome to Teams</h1>
+            <div class="main-login">
+                <div class="row">
+                    <div class="col-12">
+                        <h2>Login to your account</h2>
+                        <EditForm Model="@userModel" OnValidSubmit="@RegisterCall">
+                            <RadzenCard>
+                                <AlertMessage Message="@errorMessage" MessageType="@messageType" />
+                                <DataAnnotationsValidator />
+                                <label class="login-email">Email</label>
+                                <RadzenTextBox @bind-Value="userModel.Email"></RadzenTextBox>
+                                <ValidationMessage For="@(()=> userModel.Email)"></ValidationMessage>
+                                <label class="login-email">FirstName</label>
+                                <RadzenTextBox @bind-Value="userModel.FirstName"></RadzenTextBox>
+                                <ValidationMessage For="@(()=> userModel.FirstName)"></ValidationMessage>
+                                <label class="login-email">LastName</label>
+                                <RadzenTextBox @bind-Value="userModel.LastName"></RadzenTextBox>
+                                <ValidationMessage For="@(()=> userModel.LastName)"></ValidationMessage>
+                                <label class="login-email">Password</label>
+                                <RadzenPassword @bind-Value="userModel.Password"></RadzenPassword>
+                                <ValidationMessage For="@(()=> userModel.Password)"></ValidationMessage>
+                                <label class="login-email">Confirm Password</label>
+                                <RadzenPassword @bind-Value="passwordR"></RadzenPassword>
+                                <hr />
+                                <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Register"
+                                              ButtonStyle="Radzen.ButtonStyle.Primary" class="btn-block btn-radius ui-button mr-2" />
+                                <RadzenButton ButtonType="Radzen.ButtonType.Button" Text="Login"
+                                              ButtonStyle="Radzen.ButtonStyle.Secondary" class="btn-block btn-radius ui-button mr-2"
+                                              Click="GoToLogin" />
+                            </RadzenCard>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @code {
+        public RegisterModel userModel = new RegisterModel();
+        public AlertMessageType messageType = AlertMessageType.Error;
+        public string errorMessage;
+        public string passwordR;
+        private async Task RegisterCall()
+        {
+            if (userModel.Password != passwordR)
+            {
+                errorMessage = "Password incorrept";
+                return;
+            }
+            AuthenticateResponseModel response = await service.Register(userModel);
+            if (response == null || (response.Result != null && response.Result != "Success"))
+            {
+                errorMessage = response.Result;
+            }
+            else
+            {
+                NavigationManager.NavigateTo($"/authentication/login?userName={userModel.Email}");
+            }
+        }
+        void GoToLogin()
+        {
+            state.alert = null;
+            NavigationManager.NavigateTo("/authentication/login");
+        }
+    }
+
+</div>
